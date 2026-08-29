@@ -1,0 +1,18 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: shipsafe-petclinic
+  namespace: default
+spec:
+  template:
+    spec:
+      containers:
+        - image: icr.io/myorg/petclinic:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "prod"
+            - name: DATABASE_URL
+              value: "jdbc:postgresql://prod-db:5432/petclinic"
+            # vault secret intentionally omitted — missing deployment env var

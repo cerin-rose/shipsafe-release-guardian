@@ -1,0 +1,54 @@
+name: ShipSafe Release Guardian
+
+on:
+  push:
+    branches: ["release/*"]
+  pull_request:
+
+jobs:
+  shipsafe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # full history for git diff main...HEAD
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install flask openpyxl
+
+      - name: Run static scan (shipsafe.py)
+        run: python scripts/shipsafe.py
+
+      - name: Run live check (live_check.py)
+        env:
+          VAULT_ID: ${{ secrets.VAULT_ID }}
+        run: python scripts/live_check.py
+
+      - name: Notify (notify.py)
+        env:
+          TELEGRAM_BOT: ${{ secrets.TELEGRAM_BOT }}
+          TELEGRAM_CHAT: ${{ secrets.TELEGRAM_CHAT }}
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        run: python scripts/notify.py
+
+      - name: Upload FINAL_REPORT.md
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shipsafe-report
+          path: |
+            FINAL_REPORT.md
+            live_status.json
+            ShipSafe_Tasks.xlsx
+
+      - name: Fail if NO-GO
+        run: |
+          if grep -q "NO-GO" FINAL_REPORT.md; then
+            echo "::error::ShipSafe: release is NO-GO — see FINAL_REPORT.md artifact"
+            exit 1
+          fi
+          echo "ShipSafe: GO — release is clear"
