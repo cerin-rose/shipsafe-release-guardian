@@ -57,4 +57,4 @@ def api_status():
                     "fail": sum(1 for c in checks if c["status"]!="PASS")})
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5001)
+    app.run(debug=False, port=5001)

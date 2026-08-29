@@ -7,7 +7,7 @@
 | ID | Severity | Domain | Check | File:Line | Status |
 |----|----------|--------|-------|-----------|--------|
 | C01 | HIGH | API | Breaking API change in diff | `frontend (git diff)` | ✅ |
-| C02 | CRITICAL | Dependency | Manifest known-CVE artifact | `frontend/package.json` | ✅ |
+| C02 | CRITICAL | Dependency | Manifest known-CVE artifact | `frontend/package.json:1` | 🔴 |
 | C03 | HIGH | Dependency | requirements.txt / lockfile CVE | `requirements.txt` | ✅ |
 | C04 | CRITICAL | Config | VAULT_ID missing from config | `frontend/.env` | 🔴 |
 | C05 | CRITICAL | Security | Hardcoded secret in config | `frontend/.env` | ✅ |
@@ -26,6 +26,10 @@
 ---
 
 ## Finding Details
+### C02 — Manifest known-CVE artifact
+**Severity:** CRITICAL | **File:Line:** `frontend/package.json:1`  
+Potentially vulnerable dependency detected
+
 ### C04 — VAULT_ID missing from config
 **Severity:** CRITICAL | **File:Line:** `frontend/.env`  
 VAULT_ID not bound in .env
