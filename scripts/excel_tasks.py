@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Read FINAL_REPORT.md and write ShipSafe_Tasks.xlsx with one row per check."""
-import re, pathlib, subprocess
+import os, re, pathlib, subprocess
 from datetime import datetime, timedelta
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -164,12 +164,30 @@ def parse_details(text: str) -> dict:
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def due_date(sev: str) -> str:
+    """
+    CRITICAL → today at 17:00
+    HIGH     → tomorrow (no time)
+    MEDIUM   → this Friday at 17:00 (or today if already Friday)
+    """
     today = datetime.now().date()
     if sev == "CRITICAL":
-        return today.strftime("%Y-%m-%d")
+        return today.strftime("%Y-%m-%d") + " 17:00"
     if sev == "HIGH":
         return (today + timedelta(days=1)).strftime("%Y-%m-%d")
+    if sev == "MEDIUM":
+        days_until_friday = (4 - today.weekday()) % 7   # Mon=0 … Fri=4
+        friday = today + timedelta(days=days_until_friday)
+        return friday.strftime("%Y-%m-%d") + " 17:00"
     return ""
+
+
+def pr_link_formula(pr_number: str, repo: str) -> str:
+    """Return a HYPERLINK formula for a GitHub PR, or empty string if no PR number."""
+    if not pr_number:
+        return ""
+    base = f"https://github.com/{repo}/pull/{pr_number}" if repo else \
+           f"https://github.com/pull/{pr_number}"
+    return f'=HYPERLINK("{base}","PR #{pr_number}")'
 
 
 def fix_link_formula(file_line: str) -> str:
@@ -177,6 +195,10 @@ def fix_link_formula(file_line: str) -> str:
     abs_path = (ROOT / fp).resolve()
     return f'=HYPERLINK("file:///{abs_path}", "Open")'
 
+
+# ── PR info from environment ──────────────────────────────────────────────────
+PR_NUMBER = os.environ.get("GITHUB_PR_NUMBER", "").strip()
+PR_REPO   = os.environ.get("GITHUB_REPO", "").strip()      # e.g. "org/repo"
 
 # ── Parse report ─────────────────────────────────────────────────────────────
 text = REPORT.read_text(errors="ignore")
@@ -220,29 +242,31 @@ def mk_font(bold=False, color="161616", size=10, underline=None):
     return Font(bold=bold, color=color, size=size, name="Calibri",
                 underline=underline)
 
-# ── Row 1: Meta banner (spans all 17 columns) ─────────────────────────────────
+# ── Row 1: Meta banner (spans all 18 columns) ─────────────────────────────────
+pr_label = f"PR #{PR_NUMBER}" if PR_NUMBER else "No PR"
 META = [
     (1,  "ShipSafe Release Guardian",            mk_font(bold=True, color="FFFFFF", size=13)),
     (2,  f"Report: {generated or today_str}",    mk_font(color="F5F1E8")),
     (3,  f"Run: {now_str}",                      mk_font(color="F5F1E8")),
     (4,  f"Pending fixes: {pending_count}",      mk_font(bold=True, color="FFCCCC")),
     (5,  f"Verdict: {overall_scan}",             mk_font(bold=True, color="FFCCCC" if "NO-GO" in overall_scan else "CCFFCC")),
-    (17, f'=HYPERLINK("{DASHBOARD_URL}","Dashboard")', mk_font(bold=True, color="FFFFFF", underline="single")),
+    (6,  pr_label,                               mk_font(color="F5F1E8")),
+    (18, f'=HYPERLINK("{DASHBOARD_URL}","Dashboard")', mk_font(bold=True, color="FFFFFF", underline="single")),
 ]
 for col, val, fnt in META:
     c = ws.cell(1, col, val)
     c.font      = fnt
     c.fill      = meta_fill()
-    c.alignment = Alignment(horizontal="left" if col < 17 else "center", vertical="center")
+    c.alignment = Alignment(horizontal="left" if col < 18 else "center", vertical="center")
 
-for col in range(1, 18):                         # fill all 17 banner cells
+for col in range(1, 19):                         # fill all 18 banner cells
     c = ws.cell(1, col)
     if c.fill.fgColor.rgb == "00000000":
         c.fill = meta_fill()
 ws.row_dimensions[1].height = 22
 
 # ── Row 2: Column headers ─────────────────────────────────────────────────────
-# Columns A–J: existing | K–Q: new
+# Columns A–J: existing | K–Q: previous | R: new PR Link
 COL_HEADERS = [
     # A          B       C       D
     "Task ID",  "File", "Line", "Bug",
@@ -252,8 +276,8 @@ COL_HEADERS = [
     "Due Date", "Fix Link",
     # K              L                      M                N
     "Bug Number", "Person In Charge",    "Date Time",    "Details",
-    # O             P           Q
-    "What Fix",  "Pending",  "Created From Why",
+    # O             P           Q             R
+    "What Fix",  "Pending",  "Created From Why", "PR Link",
 ]
 ws.append(COL_HEADERS)
 HDR_ROW = 2
@@ -264,13 +288,13 @@ for cell in ws[HDR_ROW]:
     cell.border    = THIN_BORDER
 ws.row_dimensions[HDR_ROW].height = 18
 
-# Column widths A–Q
+# Column widths A–R
 WIDTHS = [
     9,  40,  6,  44,                  # A–D
     11, 52,   9,  18,                  # E–H
     12, 10,                            # I–J
     12, 22,  18,  40,                  # K–N
-    46, 10,  52,                       # O–Q
+    46, 10,  52,  14,                  # O–R
 ]
 for i, w in enumerate(WIDTHS, start=1):
     ws.column_dimensions[get_column_letter(i)].width = w
@@ -296,6 +320,8 @@ for r in rows:
     bug_number = f"BUG-{tid}"
     task_status = "Pending" if status != "PASS" else "OK"
 
+    pr_cell = pr_link_formula(PR_NUMBER, PR_REPO) if status != "PASS" else ""
+
     ws.append([
         tid, fp, ln, bug, sev, fix, task_status, now_str,   # A–H
         due_date(sev),                                        # I
@@ -307,15 +333,16 @@ for r in rows:
         what_fix,                                             # O
         pending,                                              # P
         why,                                                  # Q
+        pr_cell,                                              # R
     ])
     row_idx = ws.max_row
     fill = PatternFill("solid", fgColor=SEVERITY_FILL.get(sev, "FFFFFF"))
-    for col in range(1, 18):
+    for col in range(1, 19):
         cell = ws.cell(row_idx, col)
         cell.border    = THIN_BORDER
         cell.alignment = Alignment(wrap_text=True, vertical="top")
-        # J (Fix Link) and P (Pending) stay white; all others get severity fill
-        if col not in (10,):
+        # J (Fix Link) and R (PR Link) stay unfilled; all others get severity fill
+        if col not in (10, 18):
             cell.fill = fill
         if col == 16:    # P: Pending — bold + colour
             cell.font = Font(
@@ -323,7 +350,7 @@ for r in rows:
                 color="A21918" if pending == "Yes" else "1E6B2E",
                 size=10, name="Calibri",
             )
-        if col == 10:    # J: Fix Link — centre
+        if col in (10, 18):    # J / R: centre-aligned links
             cell.alignment = Alignment(horizontal="center", vertical="top")
 
 ws.freeze_panes = "A3"
@@ -350,7 +377,8 @@ wh.append([now_str, overall_scan, pass_c, fail_c, warn_c, len(rows)])
 # ── Save ──────────────────────────────────────────────────────────────────────
 wb.save(OUT)
 print(f"Written {len(rows)} tasks → {OUT.name}")
-print(f"  Columns A–Q  : {len(COL_HEADERS)}")
+print(f"  Columns A–R  : {len(COL_HEADERS)}")
+print(f"  PR Link      : {'#' + PR_NUMBER + ' (' + (PR_REPO or 'no repo') + ')' if PR_NUMBER else 'none (set GITHUB_PR_NUMBER)'}")
 print(f"  Pending fixes: {pending_count}")
 print(f"  Pass / Fail / Warn: {pass_c} / {fail_c} / {warn_c}")
 print(f"  History rows : {wh.max_row - 1}")
