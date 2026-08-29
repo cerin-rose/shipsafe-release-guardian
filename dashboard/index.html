@@ -1,78 +1,167 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><title>ShipSafe Dashboard</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,"Segoe UI",system-ui,sans-serif;background:#f7f8fa;color:#1f2328;font-size:14px}
-header{background:#1F4E79;color:#fff;padding:14px 24px;display:flex;align-items:center;gap:16px}
-header h1{font-size:18px;font-weight:600}
-.badge{padding:4px 12px;border-radius:12px;font-weight:700;font-size:13px}
-.GO{background:#d1fae5;color:#065f46}.NO-GO{background:#fee2e2;color:#991b1b}.UNKNOWN{background:#e5e7eb;color:#374151}
-main{max-width:1100px;margin:24px auto;padding:0 16px;display:flex;flex-direction:column;gap:24px}
-.card{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px}
-.card h2{font-size:14px;font-weight:600;color:#57606a;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em}
-.live-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-.tile{background:#f7f8fa;border:1px solid #e5e7eb;border-radius:6px;padding:12px;text-align:center}
-.tile .val{font-size:22px;font-weight:700;margin-top:4px}
-.tile .lbl{font-size:11px;color:#57606a;margin-top:2px}
-table{width:100%;border-collapse:collapse;font-size:13px}
-th{background:#f7f8fa;border-bottom:2px solid #e5e7eb;padding:8px 10px;text-align:left;font-weight:600;white-space:nowrap}
-td{border-bottom:1px solid #e5e7eb;padding:7px 10px;vertical-align:top}
-tr:last-child td{border-bottom:none}
-.sev{padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;white-space:nowrap}
-.CRITICAL{background:#fee2e2;color:#991b1b}.HIGH{background:#ffedd5;color:#9a3412}
-.MEDIUM{background:#fef9c3;color:#854d0e}.LOW{background:#dcfce7;color:#166534}
-.st-PASS{color:#16a34a;font-weight:600}.st-FAIL{color:#dc2626;font-weight:600}.st-WARN{color:#d97706;font-weight:600}
-footer{text-align:center;font-size:11px;color:#57606a;padding:16px 0;border-top:1px solid #e5e7eb;margin-top:8px}
-</style></head>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ShipSafe Release Guardian</title>
+<link rel="stylesheet" href="style.css">
+</head>
 <body>
+
 <header>
-  <h1>🛡️ ShipSafe Release Guardian</h1>
+  <div class="header-logo">
+    <span class="wordmark">ShipSafe</span>
+    <span class="tagline">Release Guardian</span>
+  </div>
   {% set v = live.get('overall', 'UNKNOWN') %}
-  <span class="badge {{ 'GO' if v == 'GO' else ('NO-GO' if v == 'NO-GO' else 'UNKNOWN') }}">
+  <span class="badge {{ 'badge-GO' if v == 'GO' else ('badge-NOGO' if v == 'NO-GO' else 'badge-UNKNOWN') }}">
     Live: {{ v }}
   </span>
-  {% set sv = 'GO' if 'GO' in overall and 'NO' not in overall else 'NO-GO' %}
-  <span class="badge {{ sv }}">Scan: {{ sv }}</span>
+  {% if 'NO-GO' in overall %}
+    <span class="badge badge-NOGO">Scan: NO-GO</span>
+  {% else %}
+    <span class="badge badge-GO">Scan: GO</span>
+  {% endif %}
+  <span class="sub">Generated: {{ live.get('generated', '—') }}</span>
 </header>
+
 <main>
+
+  {# ── Analytics bar ── #}
   <div class="card">
-    <h2>Live Status</h2>
-    <div class="live-grid">
-      <div class="tile"><div class="lbl">Actuator Health</div>
-        <div class="val">{{ live.get('health',{}).get('status_code','—') }}</div></div>
-      <div class="tile"><div class="lbl">VAULT_ID</div>
-        <div class="val">{{ '✅ Set' if live.get('vault_id',{}).get('set') else '❌ Missing' }}</div></div>
-      <div class="tile"><div class="lbl">Overall</div>
-        <div class="val"><span class="badge {{ live.get('overall','UNKNOWN') }}">{{ live.get('overall','—') }}</span></div></div>
+    <div class="card-header">Scan Analytics</div>
+    <div class="card-body">
+      <div class="live-grid" style="grid-template-columns:repeat(5,1fr)">
+        <div class="tile">
+          <div class="lbl">Generated</div>
+          <div class="val" style="font-size:13px;font-weight:600">{{ analytics.generated or '—' }}</div>
+        </div>
+        <div class="tile">
+          <div class="lbl">Total Checks</div>
+          <div class="val">{{ analytics.total }}</div>
+        </div>
+        <div class="tile">
+          <div class="lbl">Pass</div>
+          <div class="val st-PASS">{{ analytics.pass }}</div>
+        </div>
+        <div class="tile">
+          <div class="lbl">Fail</div>
+          <div class="val st-FAIL">{{ analytics.fail }}</div>
+        </div>
+        <div class="tile">
+          <div class="lbl">Warn</div>
+          <div class="val st-WARN">{{ analytics.warn }}</div>
+        </div>
+      </div>
     </div>
   </div>
+
+  {# ── Live Status ── #}
   <div class="card">
-    <h2>15 Release Checks</h2>
-    <table><tr><th>ID</th><th>Severity</th><th>Check</th><th>File:Line</th><th>Status</th></tr>
-    {% for c in checks %}
-    <tr>
-      <td>{{ c.id }}</td>
-      <td><span class="sev {{ c.severity }}">{{ c.severity }}</span></td>
-      <td>{{ c.bug }}</td>
-      <td><code style="font-size:11px">{{ c.file_line }}</code></td>
-      <td class="st-{{ c.status }}">{{ '✅ PASS' if c.status=='PASS' else ('🔴 FAIL' if c.status=='FAIL' else '🟡 WARN') }}</td>
-    </tr>{% endfor %}
-    </table>
+    <div class="card-header">Live Status</div>
+    <div class="card-body">
+      {% if live %}
+      <div class="live-grid">
+        <div class="tile">
+          <div class="lbl">Actuator Health</div>
+          <div class="val">{{ live.get('health', {}).get('status_code', '—') }}</div>
+        </div>
+        <div class="tile">
+          <div class="lbl">VAULT_ID</div>
+          <div class="val {{ 'st-PASS' if live.get('vault_id', {}).get('set') else 'st-FAIL' }}">
+            {{ 'Set' if live.get('vault_id', {}).get('set') else 'Missing' }}
+          </div>
+        </div>
+        <div class="tile">
+          <div class="lbl">Overall</div>
+          <div class="val">
+            <span class="badge {{ 'badge-GO' if live.get('overall') == 'GO' else ('badge-NOGO' if live.get('overall') == 'NO-GO' else 'badge-UNKNOWN') }}">
+              {{ live.get('overall', '—') }}
+            </span>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="live-grid">
+        <div class="tile"><div class="lbl">Actuator Health</div><div class="skeleton"></div></div>
+        <div class="tile"><div class="lbl">VAULT_ID</div><div class="skeleton"></div></div>
+        <div class="tile"><div class="lbl">Overall</div><div class="skeleton"></div></div>
+      </div>
+      {% endif %}
+    </div>
   </div>
+
+  {# ── 16 Release Checks ── #}
   <div class="card">
-    <h2>Task History (ShipSafe_Tasks.xlsx)</h2>
-    <table><tr><th>ID</th><th>File</th><th>Line</th><th>Bug</th><th>Severity</th><th>Fix Suggestion</th><th>Status</th></tr>
-    {% for t in tasks %}
-    <tr>
-      <td>{{ t.id }}</td><td><code style="font-size:11px">{{ t.file }}</code></td><td>{{ t.line }}</td>
-      <td>{{ t.bug }}</td>
-      <td><span class="sev {{ t.severity }}">{{ t.severity }}</span></td>
-      <td>{{ t.fix }}</td>
-      <td class="{{ 'st-FAIL' if t.status=='Pending' else 'st-PASS' }}">{{ t.status }}</td>
-    </tr>{% endfor %}
-    </table>
+    <div class="card-header">16 Release Checks</div>
+    <div class="card-body" style="padding:0">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Severity</th>
+            <th>Check</th>
+            <th>File:Line</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for c in checks %}
+        <tr>
+          <td><code>{{ c.id }}</code></td>
+          <td><span class="sev sev-{{ c.severity }}">{{ c.severity }}</span></td>
+          <td>{{ c.bug }}</td>
+          <td><a href="{{ c.file_line }}" target="_blank"><code>{{ c.file_line }}</code></a></td>
+          <td class="st-{{ c.status }}">{{ c.status }}</td>
+          <td>
+            {% if c.status != 'PASS' %}
+            <a class="btn-fix" href="/api/status#{{ c.id }}">Fix</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
+
+  {# ── Task History ── #}
+  {% if tasks %}
+  <div class="card">
+    <div class="card-header">Task History — ShipSafe_Tasks.xlsx</div>
+    <div class="card-body" style="padding:0">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>File</th>
+            <th>Line</th>
+            <th>Bug</th>
+            <th>Severity</th>
+            <th>Fix Suggestion</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for t in tasks %}
+        <tr>
+          <td><code>{{ t.id }}</code></td>
+          <td><code>{{ t.file }}</code></td>
+          <td>{{ t.line }}</td>
+          <td>{{ t.bug }}</td>
+          <td><span class="sev sev-{{ t.severity }}">{{ t.severity }}</span></td>
+          <td>{{ t.fix }}</td>
+          <td class="{{ 'st-FAIL' if t.status == 'Pending' else 'st-PASS' }}">{{ t.status }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
 </main>
-<footer>Made with IBM Bob</footer>
-</body></html>
+<footer>ShipSafe Release Guardian &mdash; Made with IBM Bob</footer>
+</body>
+</html>

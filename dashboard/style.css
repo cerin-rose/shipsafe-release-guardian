@@ -1,0 +1,152 @@
+/* ShipSafe Dashboard — Earthy Designer Palette */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  background: #F5F1E8;
+  color: #2C2416;
+}
+
+/* ── Header ── */
+header {
+  background: #5C4B37;
+  color: #F5F1E8;
+  padding: 16px 28px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid #4A3B2A;
+}
+.header-logo {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.header-logo .wordmark {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  line-height: 1.2;
+  color: #F5F1E8;
+}
+.header-logo .tagline {
+  font-size: 11px;
+  color: #C9B99A;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+header .sub { font-size: 12px; color: #C9B99A; margin-left: auto; white-space: nowrap; }
+
+/* ── Badges ── */
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.badge-GO      { background: #D6EDD6; color: #2A5C2A; border: 1px solid #A8CCA8; }
+.badge-NOGO    { background: #F2DDD9; color: #7A2A22; border: 1px solid #D4A8A3; }
+.badge-UNKNOWN { background: #E8E0D0; color: #6B5C45; border: 1px solid #C9B99A; }
+
+/* ── Layout ── */
+main { max-width: 1100px; margin: 24px auto; padding: 0 16px; display: flex; flex-direction: column; gap: 20px; }
+
+/* ── Card ── */
+.card {
+  background: #FFFFFF;
+  border: 1px solid #D6CBB8;
+  border-radius: 4px;
+}
+.card-header {
+  padding: 12px 20px;
+  border-bottom: 1px solid #D6CBB8;
+  background: #F5F1E8;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #7A6A55;
+}
+.card-body { padding: 20px; }
+
+/* ── Live tiles ── */
+.live-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.tile {
+  border: 1px solid #D6CBB8;
+  border-radius: 4px;
+  padding: 16px 14px;
+  background: #F5F1E8;
+  text-align: center;
+}
+.tile .lbl { font-size: 11px; color: #8B7355; text-transform: uppercase; letter-spacing: .05em; }
+.tile .val  { font-size: 20px; font-weight: 700; margin-top: 6px; color: #2C2416; }
+
+/* ── Skeleton loader ── */
+.skeleton { background: #D6CBB8; border-radius: 3px; height: 20px; margin-top: 10px; animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* ── Table ── */
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th {
+  background: #F5F1E8;
+  border-bottom: 2px solid #D6CBB8;
+  padding: 9px 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 12px;
+  white-space: nowrap;
+  color: #7A6A55;
+}
+td { border-bottom: 1px solid #D6CBB8; padding: 8px 12px; vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #FAF7F2; }
+
+/* ── Severity pills — earthy flat ── */
+.sev { padding: 1px 7px; border-radius: 3px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.sev-CRITICAL { background: #F2DDD9; color: #7A2A22; border: 1px solid #D4A8A3; }
+.sev-HIGH     { background: #F2E8D5; color: #6B3D0E; border: 1px solid #CCA87A; }
+.sev-MEDIUM   { background: #F2EDD5; color: #5C4A0A; border: 1px solid #C8B87A; }
+.sev-LOW      { background: #D6EDD6; color: #2A5C2A; border: 1px solid #A8CCA8; }
+.sev-INFO     { background: #E0E8D6; color: #3A5228; border: 1px solid #A8BCA0; }
+
+/* ── Status ── */
+.st-PASS { color: #3A6B3A; font-weight: 600; }
+.st-FAIL { color: #8B2A22; font-weight: 600; }
+.st-WARN { color: #7A5B1A; font-weight: 600; }
+
+/* ── Fix button ── */
+.btn-fix {
+  display: inline-block;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+  border: 1px solid #8B7355;
+  border-radius: 4px;
+  color: #8B7355;
+  background: #FFFFFF;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 120ms ease, color 120ms ease;
+}
+.btn-fix:hover { background: #8B7355; color: #F5F1E8; }
+
+/* ── Code ── */
+code { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; font-size: 11px; color: #4A3B2A; }
+a code { color: #8B7355; text-decoration: underline; text-underline-offset: 2px; }
+
+/* ── Footer ── */
+footer {
+  text-align: center;
+  font-size: 11px;
+  color: #8B7355;
+  padding: 16px 0;
+  border-top: 1px solid #D6CBB8;
+  margin-top: 4px;
+}
